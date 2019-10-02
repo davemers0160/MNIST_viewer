@@ -11,7 +11,7 @@ from bokeh.layouts import column, row, Spacer
 
 # set up some global variables that will be used throughout the code
 # read only
-threshold = 50
+threshold = 80
 dnn_alpha = np.full((28, 28), 255, dtype=np.uint8)
 image_name = "D:/Projects/mnist/data/test/wc_test.png"
 vc = cv.VideoCapture(0)
@@ -95,7 +95,6 @@ def build_layer_image(ls, ld, cell_dim, padding, map_length, title):
 
     img_h = (ls.nr + padding)*(cell_dim[0]-1) + ls.nr + 2*padding
     img_w = (ls.nc + padding)*(cell_dim[1]-1) + ls.nc + 2*padding
-    # layer_img = np.zeros((img_h, img_w, 3), dtype=np.float)
     layer_img = np.zeros((img_h, img_w), dtype=np.float)
 
     r = padding
@@ -112,14 +111,6 @@ def build_layer_image(ls, ld, cell_dim, padding, map_length, title):
             c = padding
             r = r + (ls.nr + padding)
 
-    # p = figure(plot_height=300, plot_width=600, title=title)
-    # p.image(image=[np.flipud(layer_img)], x=0, y=0, dw=img_w, dh=img_h, global_alpha=1.0, dilate=False, palette=jet_1k)
-    # # p.image(image=[np.flipud(layer_img)], x=0, y=0, dw=img_w, dh=img_h, global_alpha=1.0, dilate=False, color_mapper=ColorMapper(palette=jet_1k, nan_color='black'))
-    # p.axis.visible = False
-    # p.grid.visible = False
-    # p.x_range.range_padding = 0
-    # p.y_range.range_padding = 0
-    # return p
     return layer_img
 
 
@@ -181,12 +172,8 @@ def update():
     rgba_img = cv.cvtColor(color_img[r1:r2, c1:c2, :], cv.COLOR_BGR2RGBA)
 
     dnn_img = cv.resize(dnn_img, (28, 28), interpolation=cv.INTER_CUBIC).astype('float')
-
     dnn_img = (255 * (dnn_img - min_img) / (max_img - min_img)).astype(np.uint8)
     dnn_img_view = np.dstack([dnn_img, dnn_img, dnn_img, dnn_alpha])
-
-    # img = Image.open(image_name).convert('L')
-    # img2 = img.tobytes()
 
     # run the image on network and get the results
     # unsigned int run_net(unsigned char input[], unsigned int nr, unsigned int nc);
@@ -237,13 +224,6 @@ def update():
 
     l12_img = build_layer_image(ls_12, l12_data, [7, 19], 4, 1000, "Layer 12")
     l08_img = build_layer_image(ls_08, l08_data, [6, 19], 2, 1000, "Layer 08")
-
-    # l01_d = {'ls': ls01_x, 'a': l01_data, 'b': l01_res}
-
-    # source.data = {'input_img': [np.flipud(rgba_img)], 'dnn_input': [np.flipud(dnn_img_view)],
-    #                'l12_img': [np.flipud(l12_img)], 'l08_img': [np.flipud(l08_img)],
-    #                'l02_x': [ls02_x], 'l02_y': [l02_data],
-    #                'l01_x': [ls01_x], 'l01_y': [l01_data], 'l01_res': [res], 'l01_res_y': [l01_data[res]]}
 
     source.data = {'input_img': [np.flipud(rgba_img)], 'dnn_input': [np.flipud(dnn_img_view)],
                    'l12_img': [np.flipud(l12_img)], 'l08_img': [np.flipud(l08_img)]}
