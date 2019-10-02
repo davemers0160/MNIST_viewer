@@ -16,6 +16,10 @@ dnn_alpha = np.full((28, 28), 255, dtype=np.uint8)
 image_name = "D:/Projects/mnist/data/test/wc_test.png"
 vc = cv.VideoCapture(0)
 
+# modify these to point to the right locations
+lib_location = 'D:/Projects/mnist_dll/build_dll/Release/MNIST_DLL.dll'
+weights_file = "D:/Projects/mnist_dll/nets/mnist_net_pso_14_97.dat"
+
 # read and write global
 mnist_dll = []
 c1 = c2 = r1 = r2 = min_img = max_img = 0
@@ -131,12 +135,12 @@ def ld_plot(x, y, title):
 
 def init_mnist_dll():
     global mnist_dll, c1, c2, r1, r2, min_img, max_img
-    mnist_dll = ct.cdll.LoadLibrary('D:/Projects/mnist_dll/build_dll/Release/MNIST_DLL.dll')
+    mnist_dll = ct.cdll.LoadLibrary(lib_location)
 
     # initialize the network with the weights file
     init_net = mnist_dll.init_net
     init_net.argtypes = [ct.c_char_p]
-    init_net(ct.create_string_buffer(("D:/Projects/mnist_dll/nets/mnist_net_pso_14_97.dat").encode('utf-8')))
+    init_net(ct.create_string_buffer((weights_file).encode('utf-8')))
 
     # load in an image and convert to grayscale
     # color_img = cv.imread(image_name)

@@ -14,15 +14,19 @@ The python code requires the packages listed in the requirements.txt file.  To e
 pip install -r requirements.txt
 ```
 
-# #
+# Setting up and Running the Vewer #
 
 
-To run the code a little setup is required first.  
+To run the code a little setup is required first:
 
-1. Connect a webcam
-2. Create a space to write the numbers.  This requires that there be a black/dark background with a white square where the number can be written.
-3. Center the white square in the camera view
-4. Run the code:
+1. Build the mnist_dll project to create the needed library
+2. Edit the mnist_viewer.py file: 
+   - modify "lib_location" to point to the correct library location
+   - modify "weights_file" to point to the correct weights file location
+3. Connect a webcam
+4. Create a space to write the numbers.  This requires that there be a black/dark background with a white square where the number can be written.
+5. Center the white square in the camera view
+6. Run the code:
 
 ```
 python -m bokeh serve --show mnist_viewer.py
