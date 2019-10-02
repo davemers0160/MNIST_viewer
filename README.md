@@ -19,10 +19,10 @@ pip install -r requirements.txt
 
 To run the code a little setup is required first.  
 
-[1] Connect a webcam
-[2] Create a space to write the numbers.  This requires that there be a black/dark background with a white square where the number can be written.
-[3] Center the white square in the camera view
-[4] Run the code:
+1. Connect a webcam
+2. Create a space to write the numbers.  This requires that there be a black/dark background with a white square where the number can be written.
+3. Center the white square in the camera view
+4. Run the code:
 
 ```
 python -m bokeh serve --show mnist_viewer.py
