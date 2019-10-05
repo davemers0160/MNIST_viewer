@@ -1,3 +1,3 @@
 numpy
 bokeh
-cv2
+opencv-python

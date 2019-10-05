@@ -1,3 +1,5 @@
+import platform
+import os
 import math
 import ctypes as ct
 import numpy as np
@@ -8,6 +10,8 @@ from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure, show
 from bokeh.layouts import column, row, Spacer
 
+script_path = os.path.realpath(__file__)
+print('The file path is' + str(script_path))
 
 # set up some global variables that will be used throughout the code
 # read only
@@ -17,8 +21,18 @@ image_name = "D:/Projects/mnist/data/test/wc_test.png"
 vc = cv.VideoCapture(0)
 
 # modify these to point to the right locations
-lib_location = 'D:/Projects/mnist_dll/build_dll/Release/MNIST_DLL.dll'
-weights_file = "D:/Projects/mnist_dll/nets/mnist_net_pso_14_97.dat"
+if platform.system() == "Windows":
+    libname = "libminst_lib.dll"
+elif platform.system() == "Linux":
+    libname = "libminst_lib.so"
+else:
+    quit()
+
+#lib_location = "D:/Projects/mnist_dll/build/Release/" + libname
+#weights_file = "D:/Projects/mnist_dll/nets/mnist_net_pso_14_97.dat"
+
+lib_location = "/home/owner/Projects/mnist_net_lib/build/" + libname
+weights_file = "/home/owner/Projects/mnist_net_lib/nets/mnist_net_pso_14_97.dat"
 
 # read and write global
 mnist_dll = []
