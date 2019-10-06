@@ -11,28 +11,27 @@ from bokeh.plotting import figure, show
 from bokeh.layouts import column, row, Spacer
 
 script_path = os.path.realpath(__file__)
-print('The file path is' + str(script_path))
 
 # set up some global variables that will be used throughout the code
 # read only
 threshold = 80
 dnn_alpha = np.full((28, 28), 255, dtype=np.uint8)
-image_name = "D:/Projects/mnist/data/test/wc_test.png"
-vc = cv.VideoCapture(0)
+image_name = os.path.dirname(os.path.dirname(script_path)) + "/input_test.png"
+update_time = 400
+# vc = cv.VideoCapture(0)
 
 # modify these to point to the right locations
 if platform.system() == "Windows":
-    libname = "libminst_lib.dll"
+    libname = "mnist_lib.dll"
+    lib_location = "D:/Projects/mnist_dll/build/Release/" + libname
+    weights_file = "D:/Projects/mnist_dll/nets/mnist_net_pso_14_97.dat"
 elif platform.system() == "Linux":
-    libname = "libminst_lib.so"
+    libname = "libmnist_lib.so"
+    lib_location = "/home/owner/Projects/mnist_net_lib/build/" + libname
+    weights_file = "/home/owner/Projects/mnist_net_lib/nets/mnist_net_pso_14_97.dat"
 else:
     quit()
 
-#lib_location = "D:/Projects/mnist_dll/build/Release/" + libname
-#weights_file = "D:/Projects/mnist_dll/nets/mnist_net_pso_14_97.dat"
-
-lib_location = "/home/owner/Projects/mnist_net_lib/build/" + libname
-weights_file = "/home/owner/Projects/mnist_net_lib/nets/mnist_net_pso_14_97.dat"
 
 # read and write global
 mnist_dll = []
@@ -90,16 +89,6 @@ def jet_color(t, t_min, t_max):
     return rgb
 
 
-def show_input(img):
-    cm = bokeh.palettes.gray(256)
-
-    p = figure(plot_height=150, plot_width=150)
-    p.image(image=[np.flipud(np.array(img))], x=0, y=0, dw=img.width, dh=img.height, global_alpha=1.0, palette=cm)
-    p.axis.visible = False
-    p.grid.visible = False
-    return p
-
-
 def build_layer_image(ls, ld, cell_dim, padding, map_length, title):
 
     min_v = np.amin(ld)
@@ -132,23 +121,10 @@ def build_layer_image(ls, ld, cell_dim, padding, map_length, title):
     return layer_img
 
 
-def ld01_plot(x, y, title):
-    res = np.argmax(y)
-    p = figure(plot_height=200, plot_width=400, title=title)
-    p.vbar(x=x, bottom=0, top=y, color='grey', width=0.5)
-    p.vbar(x=res, bottom=0, top=y[res], color='red', width=0.5)
-    p.xaxis.ticker = x
-    return p
-
-
-def ld_plot(x, y, title):
-    p = figure(plot_height=200, plot_width=400, title=title)
-    p.vbar(x=x, bottom=0, top=y, color='blue', width=0.2)
-    return p
-
-
 def init_mnist_dll():
-    global mnist_dll, c1, c2, r1, r2, min_img, max_img
+    global mnist_dll, c1, c2, r1, r2, min_img, max_img, run_net, get_layer_12, ls_12, ld_12, get_layer_08, ls_08, ld_08, \
+        get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
+
     mnist_dll = ct.cdll.LoadLibrary(lib_location)
 
     # initialize the network with the weights file
@@ -157,8 +133,8 @@ def init_mnist_dll():
     init_net(ct.create_string_buffer((weights_file).encode('utf-8')))
 
     # load in an image and convert to grayscale
-    # color_img = cv.imread(image_name)
-    ret, color_img = vc.read()
+    color_img = cv.imread(image_name)
+    # ret, color_img = vc.read()
     gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
     img_h = gray_img.shape[0]
     img_w = gray_img.shape[1]
@@ -177,12 +153,47 @@ def init_mnist_dll():
     min_img = np.amin(dnn_img)
     max_img = np.amax(dnn_img)
 
+    # instantiate the run_net function
+    # unsigned int run_net(unsigned char input[], unsigned int nr, unsigned int nc);
+    run_net = mnist_dll.run_net
+    run_net.argtypes = [ct.POINTER(ct.c_char), ct.c_uint32, ct.c_uint32]
+    run_net.restype = ct.c_uint32
+
+    # instantiate the get_layer_12 function
+    # void get_layer_12(struct layer_struct *data, const float** data_params);
+    get_layer_12 = mnist_dll.get_layer_12
+    ls_12 = layer_struct()
+    ld_12 = ct.POINTER(ct.c_float)()
+    get_layer_12.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
+
+    # instantiate the get_layer_08 function
+    # void get_layer_08(struct layer_struct *data, const float** data_params);
+    get_layer_08 = mnist_dll.get_layer_08
+    ls_08 = layer_struct()
+    ld_08 = ct.POINTER(ct.c_float)()
+    get_layer_08.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
+
+    # instantiate the get_layer_02 function
+    # void get_layer_02(struct layer_struct *data, const float** data_params);
+    get_layer_02 = mnist_dll.get_layer_02
+    ls_02 = layer_struct()
+    ld_02 = ct.POINTER(ct.c_float)()
+    get_layer_02.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
+
+    # instantiate the get_layer_01 function
+    # void get_layer_01(struct layer_struct *data, const float** data_params);
+    get_layer_01 = mnist_dll.get_layer_01
+    ls_01 = layer_struct()
+    ld_01 = ct.POINTER(ct.c_float)()
+    get_layer_01.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
+
 
 def update():
-    global mnist_dll, c1, c2, r1, r2, min_img, max_img, l01, l02, update_plot
+    global mnist_dll, c1, c2, r1, r2, min_img, max_img, l01, l02, run_net, get_layer_12, ls_12, ld_12, get_layer_08, \
+        ls_08, ld_08, get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
 
-    ret, color_img = vc.read()
-    # color_img = cv.imread(image_name)
+    color_img = cv.imread(image_name)
+    # ret, color_img = vc.read()
     gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
 
     # crop out the white square
@@ -194,51 +205,25 @@ def update():
     dnn_img_view = np.dstack([dnn_img, dnn_img, dnn_img, dnn_alpha])
 
     # run the image on network and get the results
-    # unsigned int run_net(unsigned char input[], unsigned int nr, unsigned int nc);
-    run_net = mnist_dll.run_net
-    run_net.argtypes = [ct.POINTER(ct.c_char), ct.c_uint32, ct.c_uint32]
-    run_net.restype = ct.c_uint32
     res = run_net(dnn_img.tobytes(), dnn_img.shape[0], dnn_img.shape[1])
 
     # get the Layer 12 data
-    # void get_layer_12(struct layer_struct *data, const float** data_params);
-    get_layer_12 = mnist_dll.get_layer_12
-    ls_12 = layer_struct()
-    ld_12 = ct.POINTER(ct.c_float)()
-    get_layer_12.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
     get_layer_12(ct.byref(ls_12), ct.byref(ld_12))
     l12_data = np.ctypeslib.as_array(ld_12, [ls_12.size])
 
     # get the Layer 08 data
-    # void get_layer_08(struct layer_struct *data, const float** data_params);
-    get_layer_08 = mnist_dll.get_layer_08
-    ls_08 = layer_struct()
-    ld_08 = ct.POINTER(ct.c_float)()
-    get_layer_08.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
     get_layer_08(ct.byref(ls_08), ct.byref(ld_08))
     l08_data = np.ctypeslib.as_array(ld_08, [ls_08.size])
 
-    # get the Layer 08 data
-    # void get_layer_02(struct layer_struct *data, const float** data_params);
-    get_layer_02 = mnist_dll.get_layer_02
-    ls_02 = layer_struct()
-    ld_02 = ct.POINTER(ct.c_float)()
-    get_layer_02.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
+    # get the Layer 02 data
     get_layer_02(ct.byref(ls_02), ct.byref(ld_02))
     l02_data = np.ctypeslib.as_array(ld_02, [ls_02.size])
     ls02_x = np.arange(0, ls_02.k, 1)
 
     # get the Layer 01 data
-    # void get_layer_01(struct layer_struct *data, const float** data_params);
-    get_layer_01 = mnist_dll.get_layer_01
-    ls_01 = layer_struct()
-    ld_01 = ct.POINTER(ct.c_float)()
-    get_layer_01.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
     get_layer_01(ct.byref(ls_01), ct.byref(ld_01))
     l01_data = np.ctypeslib.as_array(ld_01, [ls_01.k])
     ls01_x = np.arange(0, ls_01.k, 1)
-    l01_res = np.zeros(ls_01.k)
-    l01_res[res] = l01_data.item(res)
 
     l12_img = build_layer_image(ls_12, l12_data, [7, 19], 4, 1000, "Layer 12")
     l08_img = build_layer_image(ls_08, l08_data, [6, 19], 2, 1000, "Layer 08")
@@ -299,4 +284,6 @@ show(layout)
 doc = curdoc()
 doc.title = "MNIST Viewer"
 doc.add_root(layout)
-doc.add_periodic_callback(update, 400)
+doc.add_periodic_callback(update, update_time)
+
+# doc.hold('combine')
