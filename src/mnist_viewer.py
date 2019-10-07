@@ -20,6 +20,9 @@ image_name = os.path.dirname(os.path.dirname(script_path)) + "/input_test.png"
 update_time = 400
 # vc = cv.VideoCapture(0)
 
+
+print("image path: " + str(image_name))
+
 # modify these to point to the right locations
 if platform.system() == "Windows":
     libname = "mnist_lib.dll"
@@ -34,7 +37,7 @@ else:
 
 
 # read and write global
-mnist_dll = []
+mnist_lib = []
 c1 = c2 = r1 = r2 = min_img = max_img = 0
 
 source = ColumnDataSource(data=dict(input_img=[], dnn_input=[], l12_img=[], l08_img=[]))
@@ -121,14 +124,14 @@ def build_layer_image(ls, ld, cell_dim, padding, map_length, title):
     return layer_img
 
 
-def init_mnist_dll():
-    global mnist_dll, c1, c2, r1, r2, min_img, max_img, run_net, get_layer_12, ls_12, ld_12, get_layer_08, ls_08, ld_08, \
+def init_mnist_lib():
+    global mnist_lib, c1, c2, r1, r2, min_img, max_img, run_net, get_layer_12, ls_12, ld_12, get_layer_08, ls_08, ld_08, \
         get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
 
-    mnist_dll = ct.cdll.LoadLibrary(lib_location)
+    mnist_lib = ct.cdll.LoadLibrary(lib_location)
 
     # initialize the network with the weights file
-    init_net = mnist_dll.init_net
+    init_net = mnist_lib.init_net
     init_net.argtypes = [ct.c_char_p]
     init_net(ct.create_string_buffer((weights_file).encode('utf-8')))
 
@@ -155,41 +158,41 @@ def init_mnist_dll():
 
     # instantiate the run_net function
     # unsigned int run_net(unsigned char input[], unsigned int nr, unsigned int nc);
-    run_net = mnist_dll.run_net
+    run_net = mnist_lib.run_net
     run_net.argtypes = [ct.POINTER(ct.c_char), ct.c_uint32, ct.c_uint32]
     run_net.restype = ct.c_uint32
 
     # instantiate the get_layer_12 function
     # void get_layer_12(struct layer_struct *data, const float** data_params);
-    get_layer_12 = mnist_dll.get_layer_12
+    get_layer_12 = mnist_lib.get_layer_12
     ls_12 = layer_struct()
     ld_12 = ct.POINTER(ct.c_float)()
     get_layer_12.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
 
     # instantiate the get_layer_08 function
     # void get_layer_08(struct layer_struct *data, const float** data_params);
-    get_layer_08 = mnist_dll.get_layer_08
+    get_layer_08 = mnist_lib.get_layer_08
     ls_08 = layer_struct()
     ld_08 = ct.POINTER(ct.c_float)()
     get_layer_08.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
 
     # instantiate the get_layer_02 function
     # void get_layer_02(struct layer_struct *data, const float** data_params);
-    get_layer_02 = mnist_dll.get_layer_02
+    get_layer_02 = mnist_lib.get_layer_02
     ls_02 = layer_struct()
     ld_02 = ct.POINTER(ct.c_float)()
     get_layer_02.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
 
     # instantiate the get_layer_01 function
     # void get_layer_01(struct layer_struct *data, const float** data_params);
-    get_layer_01 = mnist_dll.get_layer_01
+    get_layer_01 = mnist_lib.get_layer_01
     ls_01 = layer_struct()
     ld_01 = ct.POINTER(ct.c_float)()
     get_layer_01.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
 
 
 def update():
-    global mnist_dll, c1, c2, r1, r2, min_img, max_img, l01, l02, run_net, get_layer_12, ls_12, ld_12, get_layer_08, \
+    global mnist_lib, c1, c2, r1, r2, min_img, max_img, l01, l02, run_net, get_layer_12, ls_12, ld_12, get_layer_08, \
         ls_08, ld_08, get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
 
     color_img = cv.imread(image_name)
@@ -246,7 +249,7 @@ def update():
 # if __name__ == '__main__':
 jet_1k = jet_colormap(1000)
 
-init_mnist_dll()
+init_mnist_lib()
 update()
 
 p1 = figure(plot_height=250, plot_width=200, title="Webcam Input", toolbar_location="below")
