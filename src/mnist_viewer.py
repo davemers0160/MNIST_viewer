@@ -9,16 +9,17 @@ from bokeh.io import curdoc
 from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure, show
 from bokeh.layouts import column, row, Spacer
+from find_squares import find_squares
 
 script_path = os.path.realpath(__file__)
 
 # set up some global variables that will be used throughout the code
 # read only
-threshold = 80
+threshold = 150
 dnn_alpha = np.full((28, 28), 255, dtype=np.uint8)
 image_name = os.path.dirname(os.path.dirname(script_path)) + "/input_test.png"
-update_time = 400
-# vc = cv.VideoCapture(0)
+update_time = 250
+vc = cv.VideoCapture(0)
 
 
 print("image path: " + str(image_name))
@@ -38,7 +39,7 @@ else:
 
 # read and write global
 mnist_lib = []
-c1 = c2 = r1 = r2 = min_img = max_img = 0
+x_r = y_r = min_img = max_img = 0
 
 source = ColumnDataSource(data=dict(input_img=[], dnn_input=[], l12_img=[], l08_img=[]))
 
@@ -125,7 +126,7 @@ def build_layer_image(ls, ld, cell_dim, padding, map_length, title):
 
 
 def init_mnist_lib():
-    global mnist_lib, c1, c2, r1, r2, min_img, max_img, run_net, get_layer_12, ls_12, ld_12, get_layer_08, ls_08, ld_08, \
+    global mnist_lib, x_r, y_r, min_img, max_img, run_net, get_layer_12, ls_12, ld_12, get_layer_08, ls_08, ld_08, \
         get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
 
     mnist_lib = ct.cdll.LoadLibrary(lib_location)
@@ -136,21 +137,35 @@ def init_mnist_lib():
     init_net(ct.create_string_buffer((weights_file).encode('utf-8')))
 
     # load in an image and convert to grayscale
-    color_img = cv.imread(image_name)
-    # ret, color_img = vc.read()
+    # color_img = cv.imread(image_name)
+    ret, color_img = vc.read()
     gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
     img_h = gray_img.shape[0]
     img_w = gray_img.shape[1]
 
-    # find white box to bound the input
-    c = np.argwhere(gray_img[math.floor(img_h / 2), :] > threshold)
-    r = np.argwhere(gray_img[:, math.floor(img_w / 2)] > threshold)
-    c1 = c.item(0) + 2
-    c2 = c.item(len(c) - 1) - 2
-    r1 = r.item(0) + 2
-    r2 = r.item(len(r) - 1) - 2
+    # find the outer square <- make sure that the camera only sees a border of black and the white square
+    squares = find_squares(gray_img, threshold)
 
-    dnn_img = (255 - gray_img[r1:r2, c1:c2])
+    # if we found a square then get the cropping ranges
+    if len(squares) > 0:
+        xm = squares[0][:, 0] < (img_w/2)
+        ym = squares[0][:, 1] < (img_h/2)
+        x_r = slice(np.amax(squares[0][xm, 0]) + 5, np.amin(squares[0][np.logical_not(xm), 0]) - 5)
+        y_r = slice(np.amax(squares[0][ym, 1]) + 5, np.amin(squares[0][np.logical_not(ym), 1]) - 5)
+
+    else:
+        x_r = slice(0, img_w)
+        y_r = slice(0, img_h)
+    # find white box to bound the input
+
+    # c = np.argwhere(gray_img[math.floor(img_h / 2), :] > threshold)
+    # r = np.argwhere(gray_img[:, math.floor(img_w / 2)] > threshold)
+    # c1 = c.item(0) + 2
+    # c2 = c.item(len(c) - 1) - 2
+    # r1 = r.item(0) + 2
+    # r2 = r.item(len(r) - 1) - 2
+
+    dnn_img = (255 - gray_img[y_r, x_r])
     dnn_img = cv.resize(dnn_img, (28, 28), interpolation=cv.INTER_CUBIC).astype('float')
 
     min_img = np.amin(dnn_img)
@@ -192,19 +207,19 @@ def init_mnist_lib():
 
 
 def update():
-    global mnist_lib, c1, c2, r1, r2, min_img, max_img, l01, l02, run_net, get_layer_12, ls_12, ld_12, get_layer_08, \
+    global mnist_lib, x_r, y_r, min_img, max_img, l01, l02, run_net, get_layer_12, ls_12, ld_12, get_layer_08, \
         ls_08, ld_08, get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
 
-    color_img = cv.imread(image_name)
-    # ret, color_img = vc.read()
+    # color_img = cv.imread(image_name)
+    ret, color_img = vc.read()
     gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
 
     # crop out the white square
-    dnn_img = (255 - gray_img[r1:r2, c1:c2])
-    rgba_img = cv.cvtColor(color_img[r1:r2, c1:c2, :], cv.COLOR_BGR2RGBA)
+    dnn_img = (255 - gray_img[y_r, x_r])
+    rgba_img = cv.cvtColor(color_img[y_r, x_r, :], cv.COLOR_BGR2RGBA)
 
     dnn_img = cv.resize(dnn_img, (28, 28), interpolation=cv.INTER_CUBIC).astype('float')
-    dnn_img = (255 * (dnn_img - min_img) / (max_img - min_img)).astype(np.uint8)
+    dnn_img = np.minimum(np.maximum((255 * (dnn_img - min_img)) / abs(max_img - min_img), 0), 255).astype(np.uint8)
     dnn_img_view = np.dstack([dnn_img, dnn_img, dnn_img, dnn_alpha])
 
     # run the image on network and get the results
