@@ -19,7 +19,7 @@ threshold = 150
 dnn_alpha = np.full((28, 28), 255, dtype=np.uint8)
 image_name = os.path.dirname(os.path.dirname(script_path)) + "/input_test.png"
 update_time = 250
-vc = cv.VideoCapture(0)
+#vc = cv.VideoCapture(0)
 
 
 print("image path: " + str(image_name))
@@ -31,8 +31,9 @@ if platform.system() == "Windows":
     weights_file = "D:/Projects/mnist_dll/nets/mnist_net_pso_14_97.dat"
 elif platform.system() == "Linux":
     libname = "libmnist_lib.so"
-    lib_location = "/home/owner/Projects/mnist_net_lib/build/" + libname
-    weights_file = "/home/owner/Projects/mnist_net_lib/nets/mnist_net_pso_14_97.dat"
+    home = os.path.expanduser('~')
+    lib_location = home + "/Projects/mnist_net_lib/build/" + libname
+    weights_file = home + "/Projects/mnist_net_lib/nets/mnist_net_pso_14_97.dat"
 else:
     quit()
 
@@ -137,8 +138,8 @@ def init_mnist_lib():
     init_net(ct.create_string_buffer((weights_file).encode('utf-8')))
 
     # load in an image and convert to grayscale
-    # color_img = cv.imread(image_name)
-    ret, color_img = vc.read()
+    color_img = cv.imread(image_name)
+    # ret, color_img = vc.read()
     gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
     img_h = gray_img.shape[0]
     img_w = gray_img.shape[1]
@@ -210,8 +211,8 @@ def update():
     global mnist_lib, x_r, y_r, min_img, max_img, l01, l02, run_net, get_layer_12, ls_12, ld_12, get_layer_08, \
         ls_08, ld_08, get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
 
-    # color_img = cv.imread(image_name)
-    ret, color_img = vc.read()
+    color_img = cv.imread(image_name)
+    # ret, color_img = vc.read()
     gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
 
     # crop out the white square
