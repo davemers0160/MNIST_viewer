@@ -17,10 +17,13 @@ script_path = os.path.realpath(__file__)
 # read only
 threshold = 150
 dnn_alpha = np.full((28, 28), 255, dtype=np.uint8)
-image_name = os.path.dirname(os.path.dirname(script_path)) + "/input_test.png"
-update_time = 250
-#vc = cv.VideoCapture(0)
+update_time = 50
 
+use_webcam = False
+if use_webcam:
+    vc = cv.VideoCapture(0)
+else:
+    image_name = os.path.dirname(os.path.dirname(script_path)) + "/input_test.png"
 
 print("image path: " + str(image_name))
 
@@ -138,8 +141,11 @@ def init_mnist_lib():
     init_net(ct.create_string_buffer((weights_file).encode('utf-8')))
 
     # load in an image and convert to grayscale
-    color_img = cv.imread(image_name)
-    # ret, color_img = vc.read()
+    if use_webcam:
+        ret, color_img = vc.read()
+    else:
+        color_img = cv.imread(image_name)
+
     gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
     img_h = gray_img.shape[0]
     img_w = gray_img.shape[1]
@@ -211,9 +217,17 @@ def update():
     global mnist_lib, x_r, y_r, min_img, max_img, l01, l02, run_net, get_layer_12, ls_12, ld_12, get_layer_08, \
         ls_08, ld_08, get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
 
-    color_img = cv.imread(image_name)
-    # ret, color_img = vc.read()
-    gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
+    # load in an image and convert to grayscale
+    if use_webcam:
+        ret, color_img = vc.read()
+    else:
+        color_img = cv.imread(image_name)
+
+    try:
+        gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
+    except cv.error as e:
+        print('wait: ' + str(e))
+        return
 
     # crop out the white square
     dnn_img = (255 - gray_img[y_r, x_r])
