@@ -131,7 +131,7 @@ def build_layer_image(ls, ld, cell_dim, padding, map_length, title):
 
 def init_mnist_lib():
     global mnist_lib, x_r, y_r, min_img, max_img, run_net, get_layer_12, ls_12, ld_12, get_layer_08, ls_08, ld_08, \
-        get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
+        get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01, res
 
     mnist_lib = ct.cdll.LoadLibrary(lib_location)
 
@@ -180,9 +180,10 @@ def init_mnist_lib():
 
     # instantiate the run_net function
     # unsigned int run_net(unsigned char input[], unsigned int nr, unsigned int nc);
+    res = ct.c_uint32()
     run_net = mnist_lib.run_net
-    run_net.argtypes = [ct.POINTER(ct.c_char), ct.c_uint32, ct.c_uint32]
-    run_net.restype = ct.c_uint32
+    run_net.argtypes = [ct.POINTER(ct.c_char), ct.c_uint32, ct.c_uint32, ct.POINTER(ct.c_uint32)]
+    #run_net.restype = ct.c_uint32
 
     # instantiate the get_layer_12 function
     # void get_layer_12(struct layer_struct *data, const float** data_params);
@@ -238,7 +239,8 @@ def update():
     dnn_img_view = np.dstack([dnn_img, dnn_img, dnn_img, dnn_alpha])
 
     # run the image on network and get the results
-    res = run_net(dnn_img.tobytes(), dnn_img.shape[0], dnn_img.shape[1])
+    #res = run_net(dnn_img.tobytes(), dnn_img.shape[0], dnn_img.shape[1])
+    run_net(dnn_img.tobytes(), dnn_img.shape[0], dnn_img.shape[1], res)
 
     # get the Layer 12 data
     get_layer_12(ct.byref(ls_12), ct.byref(ld_12))
@@ -270,7 +272,7 @@ def update():
 
     l01.renderers = []
     l01.vbar(x=ls01_x, bottom=0, top=l01_data, color='grey', width=0.5)
-    l01.vbar(x=res, bottom=0, top=l01_data[res], color='red', width=0.5)
+    l01.vbar(x=res.value, bottom=0, top=l01_data[res], color='red', width=0.5)
 
     l01.xaxis.ticker = np.arange(0, 10)
 
