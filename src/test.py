@@ -1,13 +1,12 @@
 import platform
 import os
-import math
-#import ctypes as ct
+import time
 from cffi import FFI
 import numpy as np
 import cv2 as cv
 import bokeh
 from bokeh.io import curdoc
-from bokeh.models import ColumnDataSource
+from bokeh.models import ColumnDataSource, HoverTool
 from bokeh.plotting import figure, show
 from bokeh.layouts import column, row, Spacer
 from find_squares import find_squares
@@ -144,12 +143,51 @@ for idx in range(ls_12.k):
     t2.append(cv.cvtColor(l12_1j, cv.COLOR_RGBA2BGRA))
 
 
-for idx in range(ls_12.k):
-    cv.imshow("test", t2[idx])
-    cv.waitKey(-1)
+# for idx in range(ls_12.k):
+#     cv.imshow("test", t2[idx])
+#     cv.waitKey(-1)
 
-cv.imshow("test2", l12_1)
-
-cv.waitKey(-1)
+# cv.imshow("test2", l12_1)
+# cv.waitKey(-1)
 
 bp = 1
+
+
+# create a random array and then turn into a jet image
+t1 = time.perf_counter()
+rnd_img = np.random.rand(10, 10)
+rnd_img2 = [cv.resize(rnd_img, (200, 200), interpolation=cv.INTER_NEAREST)]
+rnd_img_jet = jet_color(rnd_img2[0], 0, 1)
+t2 = time.perf_counter()
+
+
+elapsed_time = t2 - t1
+print(elapsed_time)
+
+
+# cv.imshow("test2", rnd_img_jet)
+# cv.waitKey(-1)
+
+
+bp = 2
+
+source = ColumnDataSource(data=dict(input_img=[rnd_img_jet], rd=[rnd_img2[0]]))
+
+p1 = figure(plot_height=500, plot_width=500, title="Input", toolbar_location="below", tools="pan,wheel_zoom,zoom_in,zoom_out,reset,box_select")
+p1.image_rgba(image="input_img", x=0, y=0, dw=400, dh=400, source=source)
+p1.axis.visible = False
+p1.grid.visible = False
+p1.x_range.range_padding = 0
+p1.y_range.range_padding = 0
+
+
+test = "@rd"
+
+hover1 = [HoverTool(tooltips=[("value ", test)])]
+p1.add_tools(hover1[0])
+
+
+layout = row([p1])
+
+show(layout)
+
