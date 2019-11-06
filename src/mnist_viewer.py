@@ -2,6 +2,7 @@ import platform
 import os
 import math
 import ctypes as ct
+from cffi import FFI
 import numpy as np
 import cv2 as cv
 import bokeh
@@ -18,6 +19,7 @@ script_path = os.path.realpath(__file__)
 threshold = 150
 dnn_alpha = np.full((28, 28), 255, dtype=np.uint8)
 update_time = 50
+ffi = FFI()
 
 use_webcam = False
 if use_webcam:
@@ -40,19 +42,34 @@ elif platform.system() == "Linux":
 else:
     quit()
 
-
 # read and write global
-mnist_lib = []
+mnist_lib = ffi.dlopen(lib_location)
 x_r = y_r = min_img = max_img = 0
+
+ffi.cdef('''
+struct layer_struct{
+    unsigned int k;
+    unsigned int n;
+    unsigned int nr;
+    unsigned int nc;
+    unsigned int size;
+};
+
+void init_net(const char *net_name);
+void run_net(unsigned char* input, unsigned int nr, unsigned int nc, unsigned int *res);
+void get_layer_01(struct layer_struct *data, const float** data_params);
+void get_layer_02(struct layer_struct *data, const float** data_params);
+void get_layer_08(struct layer_struct *data, const float** data_params);
+void get_layer_12(struct layer_struct *data, const float** data_params);
+''')
 
 source = ColumnDataSource(data=dict(input_img=[], dnn_input=[], l12_img=[], l08_img=[]))
 
 l02 = figure(plot_height=350, plot_width=750, title="Layer 02")
 l01 = figure(plot_height=350, plot_width=750, title="Layer 01")
 
-
-class layer_struct(ct.Structure):
-    _fields_ = [("k", ct.c_uint), ("n", ct.c_uint), ("nr", ct.c_uint), ("nc", ct.c_uint), ("size", ct.c_uint)]
+# class layer_struct(ct.Structure):
+#     _fields_ = [("k", ct.c_uint), ("n", ct.c_uint), ("nr", ct.c_uint), ("nc", ct.c_uint), ("size", ct.c_uint)]
 
 
 def jet_clamp(v):
@@ -97,14 +114,11 @@ def jet_color(t, t_min, t_max):
     return rgb
 
 
-def build_layer_image(ls, ld, cell_dim, padding, map_length, title):
+def build_layer_image(ls, ld, cell_dim, padding, map_length):
 
     min_v = np.amin(ld)
     max_v = np.amax(ld)
     img_array = np.floor((map_length)*(ld - min_v)/(max_v - min_v)) + 100
-
-    t_min = np.amin(img_array)
-    t_max = np.amax(img_array)
 
     img_length = ls.nr * ls.nc
 
@@ -130,15 +144,10 @@ def build_layer_image(ls, ld, cell_dim, padding, map_length, title):
 
 
 def init_mnist_lib():
-    global mnist_lib, x_r, y_r, min_img, max_img, run_net, get_layer_12, ls_12, ld_12, get_layer_08, ls_08, ld_08, \
-        get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01, res
-
-    mnist_lib = ct.cdll.LoadLibrary(lib_location)
+    global mnist_lib, x_r, y_r, min_img, max_img, ls_12, ld_12, ls_08, ld_08, ls_02, ld_02, ls_01, ld_01, res
 
     # initialize the network with the weights file
-    init_net = mnist_lib.init_net
-    init_net.argtypes = [ct.c_char_p]
-    init_net(ct.create_string_buffer((weights_file).encode('utf-8')))
+    mnist_lib.init_net(weights_file.encode('utf-8'))
 
     # load in an image and convert to grayscale
     if use_webcam:
@@ -163,14 +172,6 @@ def init_mnist_lib():
     else:
         x_r = slice(0, img_w)
         y_r = slice(0, img_h)
-    # find white box to bound the input
-
-    # c = np.argwhere(gray_img[math.floor(img_h / 2), :] > threshold)
-    # r = np.argwhere(gray_img[:, math.floor(img_w / 2)] > threshold)
-    # c1 = c.item(0) + 2
-    # c2 = c.item(len(c) - 1) - 2
-    # r1 = r.item(0) + 2
-    # r2 = r.item(len(r) - 1) - 2
 
     dnn_img = (255 - gray_img[y_r, x_r])
     dnn_img = cv.resize(dnn_img, (28, 28), interpolation=cv.INTER_CUBIC).astype('float')
@@ -178,45 +179,28 @@ def init_mnist_lib():
     min_img = np.amin(dnn_img)
     max_img = np.amax(dnn_img)
 
-    # instantiate the run_net function
-    # unsigned int run_net(unsigned char input[], unsigned int nr, unsigned int nc);
-    res = ct.c_uint32()
-    run_net = mnist_lib.run_net
-    run_net.argtypes = [ct.POINTER(ct.c_char), ct.c_uint32, ct.c_uint32, ct.POINTER(ct.c_uint32)]
-    #run_net.restype = ct.c_uint32
+    # instantiate the run_net variables
+    res = ffi.new('unsigned int *')
 
-    # instantiate the get_layer_12 function
-    # void get_layer_12(struct layer_struct *data, const float** data_params);
-    get_layer_12 = mnist_lib.get_layer_12
-    ls_12 = layer_struct()
-    ld_12 = ct.POINTER(ct.c_float)()
-    get_layer_12.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
+    # instantiate the get_layer_12 variables
+    ls_12 = ffi.new('struct layer_struct*')
+    ld_12 = ffi.new('float**')
 
-    # instantiate the get_layer_08 function
-    # void get_layer_08(struct layer_struct *data, const float** data_params);
-    get_layer_08 = mnist_lib.get_layer_08
-    ls_08 = layer_struct()
-    ld_08 = ct.POINTER(ct.c_float)()
-    get_layer_08.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
+    # instantiate the get_layer_08 variables
+    ls_08 = ffi.new('struct layer_struct*')
+    ld_08 = ffi.new('float**')
 
-    # instantiate the get_layer_02 function
-    # void get_layer_02(struct layer_struct *data, const float** data_params);
-    get_layer_02 = mnist_lib.get_layer_02
-    ls_02 = layer_struct()
-    ld_02 = ct.POINTER(ct.c_float)()
-    get_layer_02.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
+    # instantiate the get_layer_02 variables
+    ls_02 = ffi.new('struct layer_struct*')
+    ld_02 = ffi.new('float**')
 
-    # instantiate the get_layer_01 function
-    # void get_layer_01(struct layer_struct *data, const float** data_params);
-    get_layer_01 = mnist_lib.get_layer_01
-    ls_01 = layer_struct()
-    ld_01 = ct.POINTER(ct.c_float)()
-    get_layer_01.argtypes = [ct.POINTER(layer_struct), ct.POINTER(ct.POINTER(ct.c_float))]
+    # instantiate the get_layer_01 variables
+    ls_01 = ffi.new('struct layer_struct*')
+    ld_01 = ffi.new('float**')
 
 
 def update():
-    global mnist_lib, x_r, y_r, min_img, max_img, l01, l02, run_net, get_layer_12, ls_12, ld_12, get_layer_08, \
-        ls_08, ld_08, get_layer_02, ls_02, ld_02, get_layer_01, ls_01, ld_01
+    global mnist_lib, x_r, y_r, min_img, max_img, l01, l02, ls_12, ld_12, ls_08, ld_08, ls_02, ld_02, ls_01, ld_01, res
 
     # load in an image and convert to grayscale
     if use_webcam:
@@ -227,7 +211,7 @@ def update():
     try:
         gray_img = cv.cvtColor(color_img, cv.COLOR_BGR2GRAY)
     except cv.error as e:
-        print('wait: ' + str(e))
+        # print('wait: ' + str(e))
         return
 
     # crop out the white square
@@ -239,29 +223,28 @@ def update():
     dnn_img_view = np.dstack([dnn_img, dnn_img, dnn_img, dnn_alpha])
 
     # run the image on network and get the results
-    #res = run_net(dnn_img.tobytes(), dnn_img.shape[0], dnn_img.shape[1])
-    run_net(dnn_img.tobytes(), dnn_img.shape[0], dnn_img.shape[1], res)
+    mnist_lib.run_net(dnn_img.tobytes(), dnn_img.shape[0], dnn_img.shape[1], res)
 
     # get the Layer 12 data
-    get_layer_12(ct.byref(ls_12), ct.byref(ld_12))
-    l12_data = np.ctypeslib.as_array(ld_12, [ls_12.size])
+    mnist_lib.get_layer_12(ls_12, ld_12)
+    l12_data = np.frombuffer(ffi.buffer(ld_12[0], ls_12.size * 4), dtype=np.float32)
 
     # get the Layer 08 data
-    get_layer_08(ct.byref(ls_08), ct.byref(ld_08))
-    l08_data = np.ctypeslib.as_array(ld_08, [ls_08.size])
+    mnist_lib.get_layer_08(ls_08, ld_08)
+    l08_data = np.frombuffer(ffi.buffer(ld_08[0], ls_08.size * 4), dtype=np.float32)
 
     # get the Layer 02 data
-    get_layer_02(ct.byref(ls_02), ct.byref(ld_02))
-    l02_data = np.ctypeslib.as_array(ld_02, [ls_02.size])
+    mnist_lib.get_layer_02(ls_02, ld_02)
+    l02_data = np.frombuffer(ffi.buffer(ld_02[0], ls_02.size * 4), dtype=np.float32)
     ls02_x = np.arange(0, ls_02.k, 1)
 
     # get the Layer 01 data
-    get_layer_01(ct.byref(ls_01), ct.byref(ld_01))
-    l01_data = np.ctypeslib.as_array(ld_01, [ls_01.k])
+    mnist_lib.get_layer_01(ls_01, ld_01)
+    l01_data = np.frombuffer(ffi.buffer(ld_01[0], ls_01.size * 4), dtype=np.float32)
     ls01_x = np.arange(0, ls_01.k, 1)
 
-    l12_img = build_layer_image(ls_12, l12_data, [7, 19], 4, 1000, "Layer 12")
-    l08_img = build_layer_image(ls_08, l08_data, [6, 19], 2, 1000, "Layer 08")
+    l12_img = build_layer_image(ls_12, l12_data, [7, 19], 4, 1000)
+    l08_img = build_layer_image(ls_08, l08_data, [6, 19], 2, 1000)
 
     source.data = {'input_img': [np.flipud(rgba_img)], 'dnn_input': [np.flipud(dnn_img_view)],
                    'l12_img': [np.flipud(l12_img)], 'l08_img': [np.flipud(l08_img)]}
@@ -272,7 +255,7 @@ def update():
 
     l01.renderers = []
     l01.vbar(x=ls01_x, bottom=0, top=l01_data, color='grey', width=0.5)
-    l01.vbar(x=res.value, bottom=0, top=l01_data[res], color='red', width=0.5)
+    l01.vbar(x=res[0], bottom=0, top=l01_data[res[0]], color='red', width=0.5)
 
     l01.xaxis.ticker = np.arange(0, 10)
 
