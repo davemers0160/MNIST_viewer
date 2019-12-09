@@ -18,7 +18,7 @@ script_path = os.path.realpath(__file__)
 # read only
 threshold = 150
 dnn_alpha = np.full((28, 28), 255, dtype=np.uint8)
-update_time = 50
+update_time = 200
 ffi = FFI()
 
 use_webcam = False
