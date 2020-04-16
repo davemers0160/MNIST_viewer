@@ -1,3 +1,8 @@
+#
+#
+# To run this file: bokeh serve --show mnist_viewer.py
+#
+
 import platform
 import os
 import math
@@ -32,8 +37,8 @@ print("image path: " + str(image_name))
 # modify these to point to the right locations
 if platform.system() == "Windows":
     libname = "mnist_lib.dll"
-    lib_location = "D:/Projects/mnist_dll/build/Release/" + libname
-    weights_file = "D:/Projects/mnist_dll/nets/mnist_net_pso_14_97.dat"
+    lib_location = "D:/Projects/mnist_net_lib/build/Release/" + libname
+    weights_file = "D:/Projects/mnist_net_lib/nets/mnist_net_pso_14_97.dat"
 elif platform.system() == "Linux":
     libname = "libmnist_lib.so"
     home = os.path.expanduser('~')
