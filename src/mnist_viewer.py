@@ -1,3 +1,8 @@
+#
+#
+# To run this file: bokeh serve --show mnist_viewer.py
+#
+
 import platform
 import os
 import math
