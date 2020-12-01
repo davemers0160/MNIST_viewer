@@ -272,7 +272,7 @@ jet_1k = jet_colormap(1000)
 init_mnist_lib()
 update()
 
-p1 = figure(plot_height=250, plot_width=200, title="Webcam Input", toolbar_location="below")
+p1 = figure(plot_height=250, plot_width=200, title="Input Image", toolbar_location="below")
 p1.image_rgba(image="input_img", x=0, y=0, dw=400, dh=400, source=source)
 p1.axis.visible = False
 p1.grid.visible = False
