@@ -6,7 +6,8 @@
 import platform
 import os
 import math
-import ctypes as ct
+#import ctypes as ct
+import setuptools
 from cffi import FFI
 import numpy as np
 import cv2 as cv
@@ -36,7 +37,7 @@ else:
 # modify these to point to the right locations
 if platform.system() == "Windows":
     libname = "mnist_lib.dll"
-    home = script_path[0:2] # assumes that the viewer project is placed into the same folder as the dll project
+    home = script_path[0:2]         # assumes that the viewer project is placed into the same folder as the dll project
     lib_location = home + "/Projects/mnist_net_lib/build/Release/" + libname
     weights_file = home + "/Projects/mnist_net_lib/nets/mnist_net_pso_14_97.dat"
 elif platform.system() == "Linux":
@@ -251,7 +252,7 @@ def update():
     l12_img = build_layer_image(ls_12, l12_data, [7, 19], 4, 1000)
     l08_img = build_layer_image(ls_08, l08_data, [6, 19], 2, 1000)
 
-    source.data = {'input_img': [np.flipud(rgba_img)], 'dnn_input': [np.flipud(dnn_img_view)],
+    source.data = {'input_img': [np.flipud(rgba_img.view("uint32").reshape(rgba_img.shape[:2]))], 'dnn_input': [np.flipud(dnn_img_view.view("uint32").reshape(dnn_img_view.shape[:2]))],
                    'l12_img': [np.flipud(l12_img)], 'l08_img': [np.flipud(l08_img)]}
 
     l02.renderers = []
@@ -301,12 +302,13 @@ l08.x_range.range_padding = 0
 l08.y_range.range_padding = 0
 
 layout = column([row([column([p1, p2]), l12, l08]), row([Spacer(width=200, height=375), l02, l01])])
+# layout = column([row([p2, l12, l08]), row([Spacer(width=200, height=375), l02, l01])])
 
 show(layout)
 
-doc = curdoc()
-doc.title = "MNIST Viewer"
-doc.add_root(layout)
-doc.add_periodic_callback(update, update_time)
+# doc = curdoc()
+# doc.title = "MNIST Viewer"
+# doc.add_root(layout)
+# doc.add_periodic_callback(update, update_time)
 
 # doc.hold('combine')
