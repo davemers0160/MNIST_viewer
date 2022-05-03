@@ -13,7 +13,7 @@ import numpy as np
 import cv2 as cv
 import bokeh
 from bokeh.io import curdoc
-from bokeh.models import ColumnDataSource
+from bokeh.models import ColumnDataSource, Div
 from bokeh.plotting import figure, show
 from bokeh.layouts import column, row, Spacer
 from find_squares import find_squares
@@ -26,6 +26,8 @@ threshold = 150
 dnn_alpha = np.full((28, 28), 255, dtype=np.uint8)
 update_time = 200
 ffi = FFI()
+plot_width = 780
+
 
 use_webcam = False
 if use_webcam:
@@ -69,10 +71,15 @@ void get_layer_08(struct layer_struct *data, const float** data_params);
 void get_layer_12(struct layer_struct *data, const float** data_params);
 ''')
 
+arch_div = Div(text="""<img src="../mnist_architecture.png", width="900" height="260">""", width=900, height=260)
+
+#<p style="margin-top:10px; margin-bottom:0px; font-size:20px"><B> Result</B></p>
+result_div = Div(text="""<p style="margin-top:8px; font-size:180px;">0</p>""", width=50, height=260)
+
 source = ColumnDataSource(data=dict(input_img=[], dnn_input=[], l12_img=[], l08_img=[]))
 
-l02 = figure(plot_height=350, plot_width=750, title="Layer 02")
-l01 = figure(plot_height=350, plot_width=750, title="Layer 01")
+l02 = figure(plot_height=350, plot_width=plot_width, title="Layer 02 Output")
+l01 = figure(plot_height=350, plot_width=plot_width, title="Layer 01 Output")
 
 # class layer_struct(ct.Structure):
 #     _fields_ = [("k", ct.c_uint), ("n", ct.c_uint), ("nr", ct.c_uint), ("nc", ct.c_uint), ("size", ct.c_uint)]
@@ -252,6 +259,8 @@ def update():
     l12_img = build_layer_image(ls_12, l12_data, [7, 19], 4, 1000)
     l08_img = build_layer_image(ls_08, l08_data, [6, 19], 2, 1000)
 
+    result_div.text = """<p style="margin-top:8px; font-size:180px;">""" + "{}".format(res[0]) + """</p>"""
+
     source.data = {'input_img': [np.flipud(rgba_img.view("uint32").reshape(rgba_img.shape[:2]))], 'dnn_input': [np.flipud(dnn_img_view.view("uint32").reshape(dnn_img_view.shape[:2]))],
                    'l12_img': [np.flipud(l12_img)], 'l08_img': [np.flipud(l08_img)]}
 
@@ -273,36 +282,59 @@ jet_1k = jet_colormap(1000)
 init_mnist_lib()
 update()
 
-p1 = figure(plot_height=250, plot_width=200, title="Input Image", toolbar_location="below")
+p1 = figure(plot_height=260, plot_width=250, title="Webcam Input", tools="save, pan, box_zoom, reset")
 p1.image_rgba(image="input_img", x=0, y=0, dw=400, dh=400, source=source)
 p1.axis.visible = False
 p1.grid.visible = False
 p1.x_range.range_padding = 0
 p1.y_range.range_padding = 0
+p1.title.text_font_size = "13pt"
 
-p2 = figure(plot_height=250, plot_width=200, title="DNN Input", toolbar_location="below")
+p2 = figure(plot_height=260, plot_width=250, title="DNN Input", tools="save, pan, box_zoom, reset")
 p2.image_rgba(image="dnn_input", x=0, y=0, dw=28, dh=28, source=source)
 p2.axis.visible = False
 p2.grid.visible = False
 p2.x_range.range_padding = 0
 p2.y_range.range_padding = 0
+p2.title.text_font_size = "13pt"
 
-l12 = figure(plot_height=500, plot_width=750, title="Layer 12")
+l12 = figure(plot_height=500, plot_width=plot_width, title="Layer 12 Output")
 l12.image(image="l12_img", x=0, y=0, dw=400, dh=300, global_alpha=1.0, dilate=False, palette=jet_1k, source=source)
 l12.axis.visible = False
 l12.grid.visible = False
 l12.x_range.range_padding = 0
 l12.y_range.range_padding = 0
+l12.title.text_font_size = "13pt"
 
-l08 = figure(plot_height=500, plot_width=750, title="Layer 08")
+l08 = figure(plot_height=500, plot_width=plot_width, title="Layer 08 Output")
 l08.image(image="l08_img", x=0, y=0, dw=400, dh=300, global_alpha=1.0, dilate=False, palette=jet_1k, source=source)
 l08.axis.visible = False
 l08.grid.visible = False
 l08.x_range.range_padding = 0
 l08.y_range.range_padding = 0
+l08.title.text_font_size = "13pt"
 
-layout = column([row([column([p1, p2]), l12, l08]), row([Spacer(width=200, height=375), l02, l01])])
-# layout = column([row([p2, l12, l08]), row([Spacer(width=200, height=375), l02, l01])])
+l01.title.text_font_size = "13pt"
+l01.xaxis.major_label_text_font_size = "12pt"
+l01.xaxis.major_label_text_font_style = "bold"
+l01.yaxis.major_label_text_font_size = "12pt"
+l01.yaxis.major_label_text_font_style = "bold"
+
+l02.title.text_font_size = "13pt"
+l02.xaxis.major_label_text_font_size = "12pt"
+l02.xaxis.major_label_text_font_style = "bold"
+l02.yaxis.major_label_text_font_size = "12pt"
+l02.yaxis.major_label_text_font_style = "bold"
+
+#layout = column([row([column([p1, p2]), l12, l08]), row([Spacer(width=200, height=375), l02, l01])])
+
+first_row = row([Spacer(width=10, height=10), p1, Spacer(width=10, height=10), p2, arch_div, result_div])
+
+second_row = row([Spacer(width=10, height=10), l12, Spacer(width=10, height=10), l08])
+
+third_row = row([Spacer(width=10, height=10), l02, Spacer(width=10, height=10), l01])
+
+layout = column([first_row, second_row, third_row])
 
 show(layout)
 
