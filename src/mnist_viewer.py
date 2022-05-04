@@ -17,6 +17,7 @@ from bokeh.models import ColumnDataSource, Div
 from bokeh.plotting import figure, show
 from bokeh.layouts import column, row, Spacer
 from find_squares import find_squares
+from bokeh.server.server import Server
 
 script_path = os.path.realpath(__file__)
 
@@ -71,7 +72,7 @@ void get_layer_08(struct layer_struct *data, const float** data_params);
 void get_layer_12(struct layer_struct *data, const float** data_params);
 ''')
 
-arch_div = Div(text="""<img src="../mnist_architecture.png", width="900" height="260">""", width=900, height=260)
+arch_div = Div(text="""<img src="http://mnist_architecture.png", width="900" height="260">""", width=900, height=260)
 
 #<p style="margin-top:10px; margin-bottom:0px; font-size:20px"><B> Result</B></p>
 result_div = Div(text="""<p style="margin-top:8px; font-size:180px;">0</p>""", width=50, height=260)
@@ -274,73 +275,85 @@ def update():
 
     l01.xaxis.ticker = np.arange(0, 10)
 
+def startup(doc):
+    # the main entry point into the code
+    # if __name__ == '__main__':
+    jet_1k = jet_colormap(1000)
 
-# the main entry point into the code
-# if __name__ == '__main__':
-jet_1k = jet_colormap(1000)
+    init_mnist_lib()
+    update()
 
-init_mnist_lib()
-update()
+    p1 = figure(plot_height=260, plot_width=250, title="Webcam Input", tools="save, pan, box_zoom, reset")
+    p1.image_rgba(image="input_img", x=0, y=0, dw=400, dh=400, source=source)
+    p1.axis.visible = False
+    p1.grid.visible = False
+    p1.x_range.range_padding = 0
+    p1.y_range.range_padding = 0
+    p1.title.text_font_size = "13pt"
 
-p1 = figure(plot_height=260, plot_width=250, title="Webcam Input", tools="save, pan, box_zoom, reset")
-p1.image_rgba(image="input_img", x=0, y=0, dw=400, dh=400, source=source)
-p1.axis.visible = False
-p1.grid.visible = False
-p1.x_range.range_padding = 0
-p1.y_range.range_padding = 0
-p1.title.text_font_size = "13pt"
+    p2 = figure(plot_height=260, plot_width=250, title="DNN Input", tools="save, pan, box_zoom, reset")
+    p2.image_rgba(image="dnn_input", x=0, y=0, dw=28, dh=28, source=source)
+    p2.axis.visible = False
+    p2.grid.visible = False
+    p2.x_range.range_padding = 0
+    p2.y_range.range_padding = 0
+    p2.title.text_font_size = "13pt"
 
-p2 = figure(plot_height=260, plot_width=250, title="DNN Input", tools="save, pan, box_zoom, reset")
-p2.image_rgba(image="dnn_input", x=0, y=0, dw=28, dh=28, source=source)
-p2.axis.visible = False
-p2.grid.visible = False
-p2.x_range.range_padding = 0
-p2.y_range.range_padding = 0
-p2.title.text_font_size = "13pt"
+    l12 = figure(plot_height=500, plot_width=plot_width, title="Layer 12 Output")
+    l12.image(image="l12_img", x=0, y=0, dw=400, dh=300, global_alpha=1.0, dilate=False, palette=jet_1k, source=source)
+    l12.axis.visible = False
+    l12.grid.visible = False
+    l12.x_range.range_padding = 0
+    l12.y_range.range_padding = 0
+    l12.title.text_font_size = "13pt"
 
-l12 = figure(plot_height=500, plot_width=plot_width, title="Layer 12 Output")
-l12.image(image="l12_img", x=0, y=0, dw=400, dh=300, global_alpha=1.0, dilate=False, palette=jet_1k, source=source)
-l12.axis.visible = False
-l12.grid.visible = False
-l12.x_range.range_padding = 0
-l12.y_range.range_padding = 0
-l12.title.text_font_size = "13pt"
+    l08 = figure(plot_height=500, plot_width=plot_width, title="Layer 08 Output")
+    l08.image(image="l08_img", x=0, y=0, dw=400, dh=300, global_alpha=1.0, dilate=False, palette=jet_1k, source=source)
+    l08.axis.visible = False
+    l08.grid.visible = False
+    l08.x_range.range_padding = 0
+    l08.y_range.range_padding = 0
+    l08.title.text_font_size = "13pt"
 
-l08 = figure(plot_height=500, plot_width=plot_width, title="Layer 08 Output")
-l08.image(image="l08_img", x=0, y=0, dw=400, dh=300, global_alpha=1.0, dilate=False, palette=jet_1k, source=source)
-l08.axis.visible = False
-l08.grid.visible = False
-l08.x_range.range_padding = 0
-l08.y_range.range_padding = 0
-l08.title.text_font_size = "13pt"
+    l01.title.text_font_size = "13pt"
+    l01.xaxis.major_label_text_font_size = "12pt"
+    l01.xaxis.major_label_text_font_style = "bold"
+    l01.yaxis.major_label_text_font_size = "12pt"
+    l01.yaxis.major_label_text_font_style = "bold"
 
-l01.title.text_font_size = "13pt"
-l01.xaxis.major_label_text_font_size = "12pt"
-l01.xaxis.major_label_text_font_style = "bold"
-l01.yaxis.major_label_text_font_size = "12pt"
-l01.yaxis.major_label_text_font_style = "bold"
+    l02.title.text_font_size = "13pt"
+    l02.xaxis.major_label_text_font_size = "12pt"
+    l02.xaxis.major_label_text_font_style = "bold"
+    l02.yaxis.major_label_text_font_size = "12pt"
+    l02.yaxis.major_label_text_font_style = "bold"
 
-l02.title.text_font_size = "13pt"
-l02.xaxis.major_label_text_font_size = "12pt"
-l02.xaxis.major_label_text_font_style = "bold"
-l02.yaxis.major_label_text_font_size = "12pt"
-l02.yaxis.major_label_text_font_style = "bold"
+    #layout = column([row([column([p1, p2]), l12, l08]), row([Spacer(width=200, height=375), l02, l01])])
 
-#layout = column([row([column([p1, p2]), l12, l08]), row([Spacer(width=200, height=375), l02, l01])])
+    first_row = row([Spacer(width=10, height=10), p1, Spacer(width=10, height=10), p2, arch_div, result_div])
 
-first_row = row([Spacer(width=10, height=10), p1, Spacer(width=10, height=10), p2, arch_div, result_div])
+    second_row = row([Spacer(width=10, height=10), l12, Spacer(width=10, height=10), l08])
 
-second_row = row([Spacer(width=10, height=10), l12, Spacer(width=10, height=10), l08])
+    third_row = row([Spacer(width=10, height=10), l02, Spacer(width=10, height=10), l01])
 
-third_row = row([Spacer(width=10, height=10), l02, Spacer(width=10, height=10), l01])
+    layout = column([first_row, second_row, third_row])
 
-layout = column([first_row, second_row, third_row])
+    #show(layout)
 
-show(layout)
+    # doc = curdoc()
+    doc.title = "MNIST Viewer"
+    doc.add_root(layout)
+    doc.add_periodic_callback(update, update_time)
 
-# doc = curdoc()
-# doc.title = "MNIST Viewer"
-# doc.add_root(layout)
-# doc.add_periodic_callback(update, update_time)
+    # doc.hold('combine')
 
-# doc.hold('combine')
+# Setting num_procs here means we can't touch the IOLoop before now, we must
+# let Server handle that. If you need to explicitly handle IOLoops then you
+# will need to use the lower level BaseServer class.
+server = Server({'/': startup})
+server.start()
+
+if __name__ == '__main__':
+    print('Opening Bokeh application on http://localhost:5006/')
+
+    server.io_loop.add_callback(server.show, "/")
+    server.io_loop.start()
