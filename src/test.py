@@ -32,8 +32,9 @@ print("image path: " + str(image_name))
 # modify these to point to the right locations
 if platform.system() == "Windows":
     libname = "mnist_lib.dll"
-    lib_location = "D:/Projects/mnist_dll/build/Release/" + libname
-    weights_file = "D:/Projects/mnist_dll/nets/mnist_net_pso_14_97.dat"
+    home = script_path[0:2]         # assumes that the viewer project is placed into the same folder as the dll project
+    lib_location = home + "/Projects/mnist_net_lib/build/Release/" + libname
+    weights_file = home + "/Projects/mnist_net_lib/nets/mnist_net_pso_14_97.dat"
 elif platform.system() == "Linux":
     libname = "libmnist_lib.so"
     home = os.path.expanduser('~')
